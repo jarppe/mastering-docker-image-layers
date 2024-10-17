@@ -7,7 +7,7 @@
   (println "service: request:" (-> req :request-method (name) (str/upper-case)) (-> req :uri))
   {:status  200
    :headers {"content-type" "text/plain"}
-   :body    "hello, world!"})
+   :body    "hello, world!\n"})
 
 
 (defn -main [& _args]

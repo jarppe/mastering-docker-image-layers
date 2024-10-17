@@ -16,7 +16,7 @@ RUN clojure -T:build build-uber
 # Distribution image:
 #
 
-FROM eclipse-temurin:23-jdk AS dist
+FROM eclipse-temurin:23-jre AS dist
 
 COPY --from=build  /workspace/target/service.jar   ./service.jar
 
