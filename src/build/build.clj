@@ -9,6 +9,13 @@
 (def libs-dir    (str target "/libs"))
 
 
+(defn build-uber [_]
+  (let [basis (b/create-basis)]
+    (b/uber {:basis     basis
+             :class-dir src-dir
+             :uber-file jar-file})))
+
+
 (defn copy-deps [_]
   (let [basis  (b/create-basis)
         jars   (->> basis

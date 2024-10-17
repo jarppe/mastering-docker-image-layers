@@ -1,9 +1,0 @@
-*
-
-!/.cljfmt.edn
-!/.gitignore
-!/.dockerignore
-!/src
-!/src/**
-!/deps.edn
-!/Dockerfile

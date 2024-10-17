@@ -1,9 +1,14 @@
 *
 
+!/layers-example
+!/layers-example/**
+!/src
+!/src/**
 !/step-*
 !/step-*/**
-
+!/.cljfmt.edn
 !/.gitignore
+!/deps.edn
 !/bb.edn
 !/explain_layers.clj
 !/README.md

@@ -1,57 +1,74 @@
-{:tasks {explain-layers {:doc  "Explain image layers, requires one argument, the image tag"
-                         :task (let [deps {'io.github.jarppe/dockler            {:mvn/version "0.0.9"}
-                                           'org.apache.commons/commons-compress {:mvn/version "1.27.1"}}]
-                                 (binding [*print-namespace-maps* false]
-                                   (apply clojure
-                                          "-Sdeps" (pr-str deps)
-                                          "-M" "explain_layers.clj"
-                                          *command-line-args*)))}
+{:tasks {:requires      ([clojure.string :as str]
+                         [babashka.fs :as fs]
+                         [babashka.http-client :as http])
+         :init          (do (defn explain-layers [image]
+                              (let [deps (binding [*print-namespace-maps* false]
+                                           (pr-str {:deps {'io.github.jarppe/dockler            {:mvn/version "0.0.9"}
+                                                           'org.apache.commons/commons-compress {:mvn/version "1.27.1"}}}))]
+                                (clojure "-Sdeps" deps "-M" "explain_layers.clj" image)))
+                            (def steps (->> (fs/list-dir ".")
+                                            (map java.nio.file.Path/.toFile)
+                                            (map java.io.File/.getName)
+                                            (filter (fn [dir] (str/starts-with? dir "step-")))
+                                            (sort)
+                                            (mapv (fn [step-dir]
+                                                    [(str "example/service:" (subs step-dir 0 6))
+                                                     step-dir])))))
 
-         test-all {:doc "Test the setup, build and test run all images"
-                   :requires ([clojure.string :as str]
-                              [babashka.fs :as fs]
-                              [babashka.http-client :as http])
-                   :task (let [steps (->> (fs/list-dir ".")
-                                          (map java.nio.file.Path/.toFile)
-                                          (map java.io.File/.getName)
-                                          (filter (fn [dir] (str/starts-with? dir "step-")))
-                                          (sort)
-                                          (mapv (fn [step-dir]
-                                                  [(str "example/service:" (subs step-dir 0 6))
-                                                   step-dir])))]
-                           (println "build: ----")
-                           (doseq [[tag dir] steps]
-                             (let [start (System/currentTimeMillis)
-                                   _ (shell {:out nil :err nil}
-                                            "docker build"
-                                            "--tag" tag
-                                            dir)
-                                   end (System/currentTimeMillis)]
-                               (println "   " tag ":" (format "%.3f sec" (/ (- end start) 1000.0)))))
-                           (println "run:   ----")
-                           (doseq [[tag dir] steps]
-                             (let [port (-> (subs dir 5 6)
-                                            (parse-long)
-                                            (+ 9000))]
-                               (println "   starting" tag "...")
-                               (shell {:out nil} "docker run --rm --init -d"
-                                      "-p" (format "127.0.0.1:%d:8080" port)
-                                      "--name" (subs dir 0 6)
-                                      tag)))
-                           (println "wait:  ---- wair for 5 sec to allow containers to start")
-                           (Thread/sleep 5000)
-                           (try
-                             (println "test:  ----")
-                             (doseq [[tag dir] steps]
-                               (let [port (-> (subs dir 5 6)
-                                              (parse-long)
-                                              (+ 9000))
-                                     url (format "http://127.0.0.1:%d/" port)]
-                                 (print "   " tag)
-                                 (let [resp (http/get url)]
-                                   (println " =>" (:status resp) (:body resp)))))
-                             (finally
-                               (println "stop:  -----")
-                               (doseq [[_ dir] steps]
-                                 (shell {:out nil} "docker stop" (subs dir 0 6)))))
-                           (println "All OK"))}}}
+         explain        {:doc  "Explain image layers, requires one argument, the image tag"
+                         :task (explain-layers (first *command-line-args*))}
+
+         layers-example {:doc  "Build, run and explain layers of the layers-example"
+                         :task (do (shell "docker build --tag example/layers-example layers-example")
+                                   (shell "docker run --rm example/layers-example")
+                                   (explain-layers "example/layers-example"))}
+
+         test:build     {:doc  "Build test images"
+                         :task (do (println "test: build")
+                                   (doseq [[tag dir] steps]
+                                     (let [start (System/currentTimeMillis)
+                                           _     (shell {:out nil
+                                                         :err nil}
+                                                        "docker build"
+                                                        "--tag" tag
+                                                        "--file" (str dir "/Dockerfile")
+                                                        ".")
+                                           end   (System/currentTimeMillis)]
+                                       (println "  " tag ":" (format "%.3f sec" (/ (- end start) 1000.0))))))}
+
+         test:run       {:doc  "Run test containers"
+                         :task (do (println "test: run")
+                                   (doseq [[tag dir] steps]
+                                     (let [port (-> (subs dir 5 6)
+                                                    (parse-long)
+                                                    (+ 9000))]
+                                       (println "   starting" tag "...")
+                                       (shell {:out nil} "docker run --rm --init -d"
+                                              "-p" (format "127.0.0.1:%d:8080" port)
+                                              "--name" (subs dir 0 6)
+                                              tag))))}
+
+         test:test      {:doc  "Test that the service responds"
+                         :task (do (println "test: make http GET to services")
+                                   (doseq [[tag dir] steps]
+                                     (let [port (-> (subs dir 5 6)
+                                                    (parse-long)
+                                                    (+ 9000))
+                                           url  (format "http://127.0.0.1:%d/" port)]
+                                       (print "  " tag)
+                                       (let [resp (http/get url)]
+                                         (println " =>" (:status resp) (:body resp))))))}
+
+         test:stop      {:doc  "Stop test containers"
+                         :task (do (println "test: stop containers")
+                                   (doseq [[_ dir] steps]
+                                     (shell {:out nil} "docker stop" (subs dir 0 6))))}
+
+         test:all       {:doc  "Test the setup, build and test run all images"
+                         :task (do (run 'test:build)
+                                   (run 'test:run)
+                                   (println "   waiting for 10 seconds...")
+                                   (Thread/sleep 10000)
+                                   (run 'test:test)
+                                   (run 'test:stop)
+                                   (println "All OK"))}}}

@@ -7,9 +7,9 @@ FROM clojure:tools-deps-bullseye-slim AS build
 WORKDIR /workspace
 
 COPY ./deps.edn ./
+RUN  clojure -P
 COPY ./src/     ./src/
 
-RUN clojure -P
 RUN clojure -T:build build-uber
 
 #
@@ -42,9 +42,10 @@ COPY --from=jre    /workspace/jre                  ./jre
 COPY --from=build  /workspace/target/service.jar   ./service.jar
 
 ENV JAVA_HOME="/workspace/jre"
+ENV CLASSPATH="./service.jar:"
 
 ENV HOST=0.0.0.0
 ENV PORT=8080
 
 ENTRYPOINT ["/workspace/jre/bin/java"]
-CMD ["-jar", "./service.jar"]
+CMD ["clojure.main", "-m", "example.service"]
