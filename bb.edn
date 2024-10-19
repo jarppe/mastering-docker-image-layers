@@ -3,9 +3,10 @@
                          [babashka.http-client :as http])
          :init          (do (defn explain-layers [image]
                               (let [deps (binding [*print-namespace-maps* false]
-                                           (pr-str {:deps {'io.github.jarppe/dockler            {:mvn/version "0.0.9"}
+                                           (pr-str {:deps {'io.github.jarppe/dockler            {:mvn/version "0.0.10"}
                                                            'org.apache.commons/commons-compress {:mvn/version "1.27.1"}}}))]
                                 (clojure "-Sdeps" deps "-M" "explain_layers.clj" image)))
+                            
                             (def steps (->> (fs/list-dir ".")
                                             (map java.nio.file.Path/.toFile)
                                             (map java.io.File/.getName)

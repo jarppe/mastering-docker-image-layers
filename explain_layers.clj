@@ -5,5 +5,6 @@
 
 (let [image (first *command-line-args*)]
   (with-open [conn (api/connect)]
-    (-> (layers/image-layers-info conn (str image))
-        (layers/explain-image-layers))))
+    (layers/explain-image-layers conn
+                                 (str image)
+                                 {:columns 80})))
