@@ -1,5 +1,5 @@
 #
-# Build phase:
+# Build stage:
 #
 
 FROM clojure:tools-deps-bullseye-slim AS build
