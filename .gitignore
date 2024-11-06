@@ -7,8 +7,12 @@
 !/step-*
 !/step-*/**
 !/.cljfmt.edn
+!/.dockerignore
 !/.gitignore
 !/deps.edn
 !/bb.edn
-!/explain_layers.clj
+!/explain-layers-image
+!/explain-layers-image/**
+!/build-explain-layers.sh
+!/explain-layers.sh
 !/README.md

@@ -1,28 +1,20 @@
 {:tasks {:requires      ([clojure.string :as str]
                          [babashka.fs :as fs]
                          [babashka.http-client :as http])
-         :init          (do (defn explain-layers [image]
-                              (let [deps (binding [*print-namespace-maps* false]
-                                           (pr-str {:deps {'io.github.jarppe/dockler            {:mvn/version "0.0.10"}
-                                                           'org.apache.commons/commons-compress {:mvn/version "1.27.1"}}}))]
-                                (clojure "-Sdeps" deps "-M" "explain_layers.clj" image)))
-                            
-                            (def steps (->> (fs/list-dir ".")
-                                            (map java.nio.file.Path/.toFile)
-                                            (map java.io.File/.getName)
-                                            (filter (fn [dir] (str/starts-with? dir "step-")))
-                                            (sort)
-                                            (mapv (fn [step-dir]
-                                                    [(str "example/service:" (subs step-dir 0 6))
-                                                     step-dir])))))
+         :init          (def steps (->> (fs/list-dir ".")
+                                        (map java.nio.file.Path/.toFile)
+                                        (map java.io.File/.getName)
+                                        (filter (fn [dir] (str/starts-with? dir "step-")))
+                                        (sort)
+                                        (mapv (fn [step-dir]
+                                                [(str "example/service:" (subs step-dir 0 6))
+                                                 step-dir]))))
 
-         explain        {:doc  "Explain image layers, requires one argument, the image tag"
-                         :task (explain-layers (first *command-line-args*))}
-
+         init           (shell)
          layers-example {:doc  "Build, run and explain layers of the layers-example"
                          :task (do (shell "docker build --tag example/layers-example layers-example")
                                    (shell "docker run --rm example/layers-example")
-                                   (explain-layers "example/layers-example"))}
+                                   (shell "./explain-layers.sh" "example/layers-example"))}
 
          test:build     {:doc  "Build test images"
                          :task (do (println "test: build")

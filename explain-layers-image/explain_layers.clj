@@ -3,8 +3,8 @@
             [dockler.util.explain-image-layers :as layers]))
 
 
-(let [image (first *command-line-args*)]
+(defn -main [& args]
   (with-open [conn (api/connect)]
     (layers/explain-image-layers conn
-                                 (str image)
+                                 (str (first args))
                                  {:columns 80})))
