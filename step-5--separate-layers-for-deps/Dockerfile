@@ -50,7 +50,7 @@ COPY --from=build  /workspace/target/libs          ./libs
 COPY --from=build  /workspace/target/service.jar   ./service.jar
 
 
-ENV JAVA_HOME="/workspace/java"
+ENV JAVA_HOME="/workspace/jre"
 ENV CLASSPATH="./service.jar:./libs/*"
 
 ENV HOST=0.0.0.0
